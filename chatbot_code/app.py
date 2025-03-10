@@ -1,10 +1,9 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect
 import os
 import boto3
 import json
 import yfinance as yf
 from yahooquery import search
-from company_dict import company_dict
 from deep_translator import GoogleTranslator
 
 inferenceProfileArn= os.getenv("BEDROCK_INFERENCE_PROFILE_ARN")
@@ -63,7 +62,6 @@ def chatbot_response(user_input):
     prompt = (
         f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘."
         f"주식 정보가 포함된 경우 가격을 포함해서 답변해줘."
-        f"일반적인 질문이면 적절한 답변을 해줘."
         f"무조건 200자 이내에 답변을 해줘"
 
         f"질문: {user_input}\n"
@@ -101,7 +99,7 @@ def chatbot_response2(user_input2):
         f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘."
         f"일반적인 질문이면 적절한 답변을 해줘."
         f"무조건 200자 이내에 답변을 해줘"
-        f"질문: {user_input2}S"
+        f"질문: {user_input2}"
     )
 
     response = bedrock_client.invoke_model(
@@ -159,5 +157,46 @@ def chat():
 def index():
     return render_template("index.html") 
 
+from Models import Webuser
+from Models import db
+from flask_sqlalchemy import SQLAlchemy
+@app.route("/register", methods=['GET','POST'])
+def register():
+    if request.method == 'GET':
+        return render_template("register.html")
+    else:
+        userid = request.form.get('userid')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        re_password = request.form.get('re_password')
+        print(password)
+        
+        if not (userid and username and password and re_password) :
+            return "모두 입력해주세요"
+        elif password != re_password:
+            return "비밀번호를 확인해주세요"
+        else:
+            webuser = Webuser()
+            webuser.password = password
+            webuser.userid = userid
+            webuser.username = username
+            db.session.add(webuser)
+            db.session.commit()
+            return "회원가입 완료"
+        return redirect('/')
+
 if __name__ == "__main__":
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    # dbfile = os.path.join(basedir, 'db.sqlite')
+    # 절대 경로로 지정정
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite'
+    app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    db.init_app(app)
+
+    with app.app_context():
+        db.create_all()  # 앱 컨텍스트 내에서 실행
+
+
     app.run(host="0.0.0.0", port=5000, debug=True)
