@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 import os
 import boto3
 import json
@@ -153,10 +153,13 @@ def chat():
     return jsonify({"response": response})
 #### ---------------- ####
 
+### chatbot page ###
 @app.route("/")
 def index():
     return render_template("index.html") 
+### ----------- ###
 
+### register page ###
 from Models import Webuser
 from Models import db
 from flask_sqlalchemy import SQLAlchemy
@@ -182,21 +185,21 @@ def register():
             webuser.username = username
             db.session.add(webuser)
             db.session.commit()
-            return "회원가입 완료"
-        return redirect('/')
+            return redirect(url_for('index'))
+### --------------- ###
 
 if __name__ == "__main__":
+    ### db table 생성 ###
     basedir = os.path.abspath(os.path.dirname(__file__))
-    # dbfile = os.path.join(basedir, 'db.sqlite')
-    # 절대 경로로 지정정
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite'
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite' # 절대 경로로 지정
     app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
 
     with app.app_context():
-        db.create_all()  # 앱 컨텍스트 내에서 실행
-
+        db.create_all() 
+    ### ------------- ###
 
     app.run(host="0.0.0.0", port=5000, debug=True)
