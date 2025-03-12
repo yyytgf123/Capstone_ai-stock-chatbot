@@ -1,4 +1,3 @@
-from flask import Flask, request
 import yfinance as yf
 from yahooquery import search
 from deep_translator import GoogleTranslator
