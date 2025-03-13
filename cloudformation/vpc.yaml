@@ -19,8 +19,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: chatbot_public_sb
-
+          Value: chatbot_public_sb  
   PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -77,3 +76,15 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       RouteTableId: !Ref PublicRoutingTable
       GatewayId: !Ref InternetGateway
+
+Outputs:
+  VPCId:
+    Description: "VPC ID"
+    Value: !Ref VPC
+    Export:
+      Name: VPC
+  PublicSubnetId:
+    Description: "SB ID"
+    Value: !Ref PublicSubnet
+    Export:
+      Name: PublicSubnet

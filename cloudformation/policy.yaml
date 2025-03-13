@@ -1,0 +1,28 @@
+Resources:
+  Policy:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: bedrockrole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess" #Bedrock
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" #Package install
+  #EC2 연결
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref Policy
+
+Outputs:
+  InstanceProfile:
+    Description: "InstanceProfile ID"
+    Value: !Ref InstanceProfile
+    Export:
+      Name: InstanceProfile

@@ -1,0 +1,46 @@
+Resources:
+  EC2:
+    Type: AWS::EC2::Instance
+    DependsOn: Policy
+    Properties:
+      InstanceType: t2.micro
+      ImageId: !Sub "{{resolve:ssm:/aws/service/canonical/ubuntu/server/latest/stable/amd64/hvm/ebs-gp2}}"
+      SecurityGroups:
+        - !ImportValue Securitygroup
+      AvailabilityZone: ap-northeast-2a
+      EbsOptimized: true
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp2
+      SubnetId: !ImportValue PublicSubnet
+      IamInstanceProfile: !ImportValue InstanceProfile-Export
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt update -y
+          sudo apt install -u python3 python3-pip python3-vevn git
+          pip install --upgrade pip
+          pip install flask boto3 yahooquery requests
+          pip install beautifulsoup4
+          pip install googletrans==4.0.0rc1
+      Tags:
+        - Key: Name
+          Value: chatbot_ec2
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+  
+  IPAssoc:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref EC2
+      EIP: !Ref ElasticIP
+
+Outputs:
+  EIPID:
+    Description: "EIP ID"
+    Value: !Ref ElasticIP
+    Export:
+      Name: ElasticIP

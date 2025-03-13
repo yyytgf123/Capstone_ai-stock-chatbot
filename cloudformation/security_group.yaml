@@ -1,0 +1,26 @@
+Resources:
+  Securitygroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !ImportValue VPC
+      GroupDescription: chatbot SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 0
+Outputs:
+  SecuritygroupId:
+    Description: "SG ID"
+    Value: !Ref Securitygroup
+    Export:
+      Name: Securitygroup

@@ -1,0 +1,19 @@
+Resources:
+  Route53:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      VPCs:
+        Name: cbnu.store
+        #Private Hosted Zone
+        # - VPCId: !Ref VPC
+        #   VPCRegion: ap-northeast-2
+
+  Route53Record:
+    Type: AWS::Route53::RecordSet
+    DependsOn: !ImportValue ElasticIP
+    Properties:
+      Name: www.cbnu.store
+      Type: A
+      HostedZoneId: !Ref Route53
+      ResourceRecords:
+        - !ImportValue ElasticIP

@@ -1,0 +1,31 @@
+Resources:
+  Stack1:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://chatbot-s3-repo.s3.ap-northeast-2.amazonaws.com/vpc.yaml
+
+  Stack2:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://chatbot-s3-repo.s3.ap-northeast-2.amazonaws.com/security_group.yaml
+    DependsOn: Stack1
+
+  Stack3:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://chatbot-s3-repo.s3.ap-northeast-2.amazonaws.com/policy.yaml
+
+  Stack4:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://chatbot-s3-repo.s3.ap-northeast-2.amazonaws.com/ec2.yaml
+    DependsOn:
+      - Stack1
+      - Stack2
+      - Stack3
+
+  Stack5:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://chatbot-s3-repo.s3.ap-northeast-2.amazonaws.com/Route53.yaml
+    DependsOn: Stack4  
