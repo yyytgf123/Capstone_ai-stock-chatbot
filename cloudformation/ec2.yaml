@@ -1,21 +1,20 @@
 Resources:
   EC2:
     Type: AWS::EC2::Instance
-    DependsOn: Policy
     Properties:
       InstanceType: t2.micro
-      ImageId: !Sub "{{resolve:ssm:/aws/service/canonical/ubuntu/server/latest/stable/amd64/hvm/ebs-gp2}}"
-      SecurityGroups:
+      ImageId: ami-024ea438ab0376a47
+      SecurityGroupIds: 
         - !ImportValue Securitygroup
       AvailabilityZone: ap-northeast-2a
       EbsOptimized: true
-      BlockDeviceMappings:
-        - DeviceName: /dev/sda1
-          Ebs:
-            VolumeSize: 30
-            VolumeType: gp2
+      # BlockDeviceMappings:
+      #   - DeviceName: /dev/sda1
+      #     Ebs:
+      #       VolumeSize: 30
+      #       VolumeType: gp2
       SubnetId: !ImportValue PublicSubnet
-      IamInstanceProfile: !ImportValue InstanceProfile-Export
+      IamInstanceProfile: !ImportValue InstanceProfile
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash

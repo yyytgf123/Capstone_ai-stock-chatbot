@@ -28,4 +28,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: https://chatbot-s3-repo.s3.ap-northeast-2.amazonaws.com/Route53.yaml
-    DependsOn: Stack4  
+    DependsOn: 
+      - Stack1
+      - Stack4
+
