@@ -1,14 +1,51 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 import os
+from dotenv import load_dotenv
 import boto3
 import json
 from yahooquery import search
 from func.stock_price import get_currency, get_stock_price, get_stock_symbol, find_company_symbol
 
 ### bedrock setting ###
+load_dotenv()
 inferenceProfileArn= os.getenv("BEDROCK_INFERENCE_PROFILE_ARN")
+print(inferenceProfileArn)
 app = Flask(__name__)
 bedrock_client = boto3.client("bedrock-runtime", region_name="ap-northeast-2")
+### --------------- ###
+
+### 일반 평문 대답 ###
+def chatbot_response(user_input):
+    prompt = (
+        f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘."
+        f"일반적인 질문이면 적절한 답변을 해줘."
+        f"무조건 200자 이내에 답변을 해줘"
+        f"질문: {user_input}"
+    )
+
+    response = bedrock_client.invoke_model(
+        modelId=inferenceProfileArn,
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 200,
+            "top_k": 250,
+            "stop_sequences": [],
+            "temperature": 1,
+            "top_p": 0.999,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": prompt}]
+                }
+            ]
+        }),
+    )
+
+    ai_response = json.loads(response["body"].read())["content"][0]["text"]
+
+    return ai_response.strip()
 ### --------------- ###
 
 ### 주식 가격 출력 response ###
@@ -55,40 +92,6 @@ def chatbot_response2(user_input):
     return stock_info if stock_info else ai_response.strip()
 ### --------------------- ###
 
-### 일반 평문 대답 ###
-def chatbot_response(user_input):
-    prompt = (
-        f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘."
-        f"일반적인 질문이면 적절한 답변을 해줘."
-        f"무조건 200자 이내에 답변을 해줘"
-        f"질문: {user_input}"
-    )
-
-    response = bedrock_client.invoke_model(
-        modelId=inferenceProfileArn,
-        contentType="application/json",
-        accept="application/json",
-        body=json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 200,
-            "top_k": 250,
-            "stop_sequences": [],
-            "temperature": 1,
-            "top_p": 0.999,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [{"type": "text", "text": prompt}]
-                }
-            ]
-        }),
-    )
-
-    ai_response = json.loads(response["body"].read())["content"][0]["text"]
-
-    return ai_response.strip()
-### --------------- ###
-
 ### 경제 뉴스 출력 ###
 from func.news import get_urls, extract_Data
 
@@ -109,6 +112,7 @@ def chatbot_response3(user_input):
         f"무조건 500자 이내에 답변을 해줘"
         f"질문 : {user_input}"
         f"대답 참고 : 뉴스 날짜 + {news_dict}"
+        # html 사이즈 파악 후 한 줄에 입력될 글자 수 지정 필요
     )
 
     response = bedrock_client.invoke_model(
@@ -136,6 +140,52 @@ def chatbot_response3(user_input):
     return ai_response.strip()
 ### --------------- ###
 
+### 주가 예측 ###
+from func.sp_predict import stock_data
+import matplotlib.pylab as plt
+import io
+import base64
+
+def chatbot_response4(user_input):
+    # 주가 데이터 가져오기
+    data = stock_data(user_input)
+
+    # 프롬프트 구성 (주가 예측을 보장하지 않도록 수정)
+    prompt = (
+        f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘.\n"
+        f"무조건 500자 이내에 답변을 해줘.\n"
+        f"질문 : {user_input}\n"
+        f"아래는 2025년 1월 1일부터의 주가 데이터야. 이 데이터를 기반으로 향후 주가에 대한 전망을 분석해줘.\n"
+        f"단, 주가는 다양한 외부 요인에 의해 변동될 수 있으며, AI의 분석이 100% 정확하지 않을 수도 있어."
+        f"\n\n{data.head(5)}"
+    )
+
+    # Bedrock 모델 호출
+    response = bedrock_client.invoke_model(
+        modelId=inferenceProfileArn,
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 500,
+            "top_k": 250,
+            "stop_sequences": [],
+            "temperature": 1,
+            "top_p": 0.999,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": prompt}]
+                }
+            ]
+        }),
+    )
+
+    ai_response = json.loads(response["body"].read())["content"][0]["text"]
+
+    return response
+### --------------- ###
+
 #### Flask 엔드포인트 ####
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -156,10 +206,13 @@ def chat():
     """
     stock_price_keywords = ["주가", "가격", "주식가격", "주식 가격"]
     news_keywords = ["경제뉴스", "경제 뉴스", "최신 경제"]
+    sp_predict_keywords = ["주가예측"]
     if any(keyword in user_input for keyword in stock_price_keywords):
         response = chatbot_response2(user_input)
     elif any(keyword in user_input for keyword in news_keywords):
         response = chatbot_response3(user_input)
+    elif any(keyword in user_input for keyword in sp_predict_keywords):
+        response = chatbot_response4(user_input)
     else:
         response = chatbot_response(user_input)
     return jsonify({"response": response})
@@ -204,9 +257,11 @@ if __name__ == "__main__":
     ### db table 생성 ###
     basedir = os.path.abspath(os.path.dirname(__file__))
     
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite' # 절대 경로로 지정
+    dbfile = os.path.join(basedir, 'chatbot_repo.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{dbfile}' # 절대 경로로 지정
     app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
     db.init_app(app)
 
