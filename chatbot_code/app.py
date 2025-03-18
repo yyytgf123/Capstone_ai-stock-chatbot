@@ -9,7 +9,6 @@ from func.stock_price import get_currency, get_stock_price, get_stock_symbol, fi
 ### bedrock setting ###
 load_dotenv()
 inferenceProfileArn= os.getenv("BEDROCK_INFERENCE_PROFILE_ARN")
-print(inferenceProfileArn)
 app = Flask(__name__)
 bedrock_client = boto3.client("bedrock-runtime", region_name="ap-northeast-2")
 ### --------------- ###
