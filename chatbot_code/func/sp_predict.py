@@ -1,21 +1,18 @@
 import yfinance as yf
-import pandas as pd
 import boto3
+import numpy as np
+import io
 import os
-from dotenv import load_dotenv
+import pandas as pd
 from yahooquery import search
 from deep_translator import GoogleTranslator
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
-### 임시 ###
-load_dotenv()
-inferenceProfileArn= os.getenv("BEDROCK_INFERENCE_PROFILE_ARN")
-bedrock_client = boto3.client("bedrock-runtime", region_name="ap-northeast-2")
-### --- ###
-
-bucket_name = "chatbot-sagemaker-s3"
-upload_file_name = "stock_data.csv"
+# sagemkaer #
+import sagemaker
+from sklearn.model_selection import train_test_split
+from sagemaker import get_execution_role
+# --------- #
 
 ### fid symbol ###
 def get_stock_symbol(company_name):
@@ -57,21 +54,38 @@ def stock_data(symbol):
     return df
 ### ---------- ###
 
-def s3_upload(user_input):
+### s3 upload ###
+def traindata_s3_upload(user_input):
     symbol = find_company_symbol(user_input)
     """
     .csv -> s3
     """
     df = stock_data(symbol)
-    df.to_csv("stock_data.csv", index=False) #df -> .csv 변경   
-    s3_client = boto3.client("s3")
-    
-    # s3에 파일 지속적으로 쌓임 -> 고려
-    # s3_client.upload_file("stock_data.csv", bucket_name, f"stock_data_{symbol}.csv")
-    s3_client.upload_file("stock_data.csv", bucket_name, upload_file_name)
-### --------------- ###
+    df.to_csv("stock_data.csv", index=False, header=False) #df -> .csv 변경 -> data에 저장
+    data_to_read = pd.read_csv("stock_data.csv", delimiter=";") #csv -> pd dataFrame
 
-# 이후 작업
-# 1. s3(.csv)로 sagemaker 모델로 훈련
-# 2. sagemaker endpoint
-# 3. bedrock 출력
+    print(data_to_read)
+
+    train_data, test_data = train_test_split(data_to_read, test_size=0.2)
+    test_data, validation_data = train_test_split(data_to_read, test_size=0.5)
+
+    bucket = "chatbot-sagemaker-s3"
+    prefix = "sagemkaer/white-data" #s3 저장 경로
+
+    sagemaker_session = sagemaker.Session() #sagemaker 리소스 관리
+    role = "arn:aws:iam::047719624346:role/chatbot-sagemaker-policy"    
+    
+    train_file_path = 'train.csv'
+    train_data.to_csv(train_file_path, index=False, header=False) #index, header 불필요 데이터 제거
+    s3_train_data = sagemaker_session.upload_data(path=train_file_path, bucket=bucket, key_prefix=prefix+'/train')
+
+    test_file_path = 'test.csv'
+    test_data.to_csv(test_file_path, index=False, header=False)
+    s3_test_data = sagemaker_session.upload_data(path=test_file_path, bucket=bucket, key_prefix=prefix+'/test')
+
+    validation_file_path = 'validation.csv'
+    validation_data.to_csv(validation_file_path, index=False, header=False)
+    s3_validation_data = sagemaker_session.upload_data(path=validation_file_path, bucket=bucket, key_prefix=prefix+'/validation')
+### --------- ###
+
+traindata_s3_upload("애플")

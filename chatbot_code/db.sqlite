@@ -1,1 +1,0 @@
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:/Git_repo/capstion/chatbot_code/chatbot_repo.db'
