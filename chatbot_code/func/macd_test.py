@@ -10,4 +10,4 @@ df["Return"] = df["Close"].pct_change()
 
 df["Vol_MA5"] = df["Volume"].rolling(window=5).mean()
 
-print(df["Vol_MA5"])
+# print(df["Vol_MA5"])
