@@ -70,9 +70,10 @@ def stock_data(symbol):
     df["MA26"] = df['Close'].rolling(window=26).mean()
     df["Vol_MA5"] = df['Volume'].rolling(window=5).mean()
     df["Pct_change"] = df['Close'].pct_change()
+    df["Close"] = df["Close"].shift(-1) #예측 값 -> y
+  
+    df = df[['MA9', 'MA12', 'MA26', 'Vol_MA5','Pct_change', 'Close']]
 
-    df = df[['MA9', 'MA12', 'MA26', 'Vol_MA5','Pct_change']]
-    
     df.dropna(inplace=True)
     
     return df
@@ -90,25 +91,25 @@ def compare_data(symbol):
 
     #주말 계산 필요
     #ma9
-    ma9_date = today - relativedelta(days=11)
+    ma9_date = today - relativedelta(days=12)
     formatted_ma9_date = ma9_date.strftime("%Y-%m-%d")
     df_ma9 = yf.download(symbol, start=formatted_ma9_date, end=formatted_n_today)
     df["MA9"] = df_ma9["Close"].rolling(window=9).mean()
 
     #ma12
-    ma12_date = today - relativedelta(days=16)
+    ma12_date = today - relativedelta(days=17)
     formatted_ma12_date = ma12_date.strftime("%Y-%m-%d")
     df_ma12 = yf.download(symbol, start=formatted_ma12_date, end=formatted_n_today)
     df["MA12"] = df_ma12["Close"].rolling(window=12).mean()
 
-    #ma21
-    ma21_date = today - relativedelta(days=29)
-    formatted_mad21_date = ma21_date.strftime("%Y-%m-%d")
-    df_ma21 = yf.download(symbol, start=formatted_mad21_date, end=formatted_n_today)
-    df["MA21"] = df_ma21["Close"].rolling(window=21).mean()
+    #ma26
+    ma26_date = today - relativedelta(days=38)
+    formatted_mad26_date = ma26_date.strftime("%Y-%m-%d")
+    df_ma26 = yf.download(symbol, start=formatted_mad26_date, end=formatted_n_today)
+    df["MA26"] = df_ma26["Close"].rolling(window=26).mean()
 
     #vol_ma5
-    vol_ma5 = today - relativedelta(days=7)
+    vol_ma5 = today - relativedelta(days=8)
     formatted_vol_ma5 = vol_ma5.strftime("%Y-%m-%d")
     df_vol_ma5 = yf.download(symbol, start=formatted_vol_ma5, end=formatted_n_today)
     df["Vol_MA5"] = df_vol_ma5["Volume"].rolling(window=5).mean()
@@ -119,6 +120,8 @@ def compare_data(symbol):
     pct_change = yf.download(symbol, start=formatted_pct_change, end=formatted_n_today)
     df["Pct_change"] = pct_change["Close"].pct_change()
     
+    df = df[['MA9', 'MA12', 'MA26', 'Vol_MA5', 'Pct_change']]
+
     df.dropna(inplace=True)
 
     return df
@@ -134,10 +137,10 @@ def sagemaker_training(user_input):
     """
     df = stock_data(symbol)
     df.to_csv("stock_data.csv", index=False, header=False) #df -> .csv 변경 -> data에 저장
-    data_to_read = pd.read_csv("stock_data.csv", delimiter=";") #csv -> pd dataFrame
+    data_to_read = pd.read_csv("stock_data.csv", delimiter=",") #csv -> pd dataFrame
 
-    dy = stock_close(symbol)
-    y = dy['Close'].shift(-1) #다음 날 종가를 예측하기 위해 -1씩 밀기
+    # dy = stock_close(symbol)
+    # y = dy['Close'].shift(-1) #다음 날 종가를 예측하기 위해 -1씩 밀기
 
     train_data, test_data = train_test_split(data_to_read, test_size=0.2) #8:2로 나눔
 
@@ -151,7 +154,7 @@ def sagemaker_training(user_input):
     train_file_path = 'train.csv'
     #df == X
     #input 값 - MA9, MA12, MA26, Vol_MA5, Pct_Change, 타겟 값 - Close(예측할 값)
-    train_data = pd.concat([df, y], axis=1)
+    # train_data = pd.concat([df, y], axis=1)
     train_data.to_csv(train_file_path, index=False, header=False) #index, header 불필요 데이터 제거
     s3_train_data = sagemaker_session.upload_data(path=train_file_path, bucket=bucket, key_prefix=prefix+'/train')
 
@@ -170,7 +173,7 @@ def sagemaker_training(user_input):
     #docker에서 제공하는 sagemaker.estimator.Estimator 사용, "Tensorflow" 고려
     xgboost = sagemaker.estimator.Estimator(container,      
                                             role = "arn:aws:iam::047719624346:role/chatbot-sagemaker-policy",
-                                            train_instance_count = 2,
+                                            train_instance_count = 1,
                                             train_instance_type = "ml.m5.xlarge",
                                             output_path = traindata_bucket,
                                             sagemaker_session=sagemaker_session) #sagemaker 모델 학습, 데이터 저장, 배포 관리 -> 세션 전달
@@ -207,7 +210,9 @@ def sagemaker_training(user_input):
     response = runtime.invoke_endpoint(EndpointName=endpoint_name,
                                        ContentType='text/csv',
                                        Body=type_trans_test_data)
+    
     result = json.loads(response['Body'].read().decode())
+    
     print(result)
     
 ### ------------------------ ###

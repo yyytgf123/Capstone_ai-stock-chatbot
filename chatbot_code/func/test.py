@@ -15,25 +15,25 @@ def compare_data(symbol):
 
     #주말 계산 필요
     #ma9
-    ma9_date = today - relativedelta(days=11)
+    ma9_date = today - relativedelta(days=12)
     formatted_ma9_date = ma9_date.strftime("%Y-%m-%d")
     df_ma9 = yf.download(symbol, start=formatted_ma9_date, end=formatted_n_today)
     df["MA9"] = df_ma9["Close"].rolling(window=9).mean()
 
     #ma12
-    ma12_date = today - relativedelta(days=16)
+    ma12_date = today - relativedelta(days=17)
     formatted_ma12_date = ma12_date.strftime("%Y-%m-%d")
     df_ma12 = yf.download(symbol, start=formatted_ma12_date, end=formatted_n_today)
     df["MA12"] = df_ma12["Close"].rolling(window=12).mean()
 
-    #ma21
-    ma21_date = today - relativedelta(days=29)
-    formatted_mad21_date = ma21_date.strftime("%Y-%m-%d")
-    df_ma21 = yf.download(symbol, start=formatted_mad21_date, end=formatted_n_today)
-    df["MA21"] = df_ma21["Close"].rolling(window=21).mean()
+    #ma26
+    ma26_date = today - relativedelta(days=38)
+    formatted_mad26_date = ma26_date.strftime("%Y-%m-%d")
+    df_ma26 = yf.download(symbol, start=formatted_mad26_date, end=formatted_n_today)
+    df["MA26"] = df_ma26["Close"].rolling(window=26).mean()
 
     #vol_ma5
-    vol_ma5 = today - relativedelta(days=7)
+    vol_ma5 = today - relativedelta(days=8)
     formatted_vol_ma5 = vol_ma5.strftime("%Y-%m-%d")
     df_vol_ma5 = yf.download(symbol, start=formatted_vol_ma5, end=formatted_n_today)
     df["Vol_MA5"] = df_vol_ma5["Volume"].rolling(window=5).mean()
@@ -44,6 +44,8 @@ def compare_data(symbol):
     pct_change = yf.download(symbol, start=formatted_pct_change, end=formatted_n_today)
     df["Pct_change"] = pct_change["Close"].pct_change()
     
+    df = df[['MA9', 'MA12', 'MA26', 'Vol_MA5', 'Pct_change']]
+
     df.dropna(inplace=True)
 
     return df
@@ -54,9 +56,10 @@ def dataframe_to_bytes(df):
     df.to_csv(buffer, index=False, header=False)
     return buffer.getvalue()
 
-stock = compare_data("AAPL")
+test_data = compare_data("AAPL")  
 
+print(f"{test_data}")
 
-trans_stock = dataframe_to_bytes(stock)
+type_trans_test_data = dataframe_to_bytes(test_data)
 
-print(trans_stock)
+print(type_trans_test_data)
