@@ -54,11 +54,11 @@ def stock_close(symbol):
     return df
 ### ----------------- ###
 
-### get .csv ###
+### train data ###
 def stock_data(symbol):
     today = datetime.today()
     formatted_today = today.strftime("%Y-%m-%d")
-    two_months_ago = today - relativedelta(months=6)
+    two_months_ago = today - relativedelta(months=3)
     formatted_three_months_ago = two_months_ago.strftime("%Y-%m-%d")
 
     """
@@ -91,19 +91,19 @@ def compare_data(symbol):
 
     #주말 계산 필요
     #ma9
-    ma9_date = today - relativedelta(days=12)
+    ma9_date = today - relativedelta(days=14)
     formatted_ma9_date = ma9_date.strftime("%Y-%m-%d")
     df_ma9 = yf.download(symbol, start=formatted_ma9_date, end=formatted_n_today)
     df["MA9"] = df_ma9["Close"].rolling(window=9).mean()
 
     #ma12
-    ma12_date = today - relativedelta(days=17)
+    ma12_date = today - relativedelta(days=20)
     formatted_ma12_date = ma12_date.strftime("%Y-%m-%d")
     df_ma12 = yf.download(symbol, start=formatted_ma12_date, end=formatted_n_today)
     df["MA12"] = df_ma12["Close"].rolling(window=12).mean()
 
     #ma26
-    ma26_date = today - relativedelta(days=38)
+    ma26_date = today - relativedelta(days=40)
     formatted_mad26_date = ma26_date.strftime("%Y-%m-%d")
     df_ma26 = yf.download(symbol, start=formatted_mad26_date, end=formatted_n_today)
     df["MA26"] = df_ma26["Close"].rolling(window=26).mean()
@@ -115,16 +115,15 @@ def compare_data(symbol):
     df["Vol_MA5"] = df_vol_ma5["Volume"].rolling(window=5).mean()
 
     #pct_change
-    pct_change = today - relativedelta(days=3)
+    pct_change = today - relativedelta(days=4)
     formatted_pct_change = pct_change.strftime("%Y-%m-%d")
     pct_change = yf.download(symbol, start=formatted_pct_change, end=formatted_n_today)
     df["Pct_change"] = pct_change["Close"].pct_change()
     
     df = df[['MA9', 'MA12', 'MA26', 'Vol_MA5', 'Pct_change']]
 
-    df.dropna(inplace=True)
+    return df.iloc[-1:] #마지막 값만 출력
 
-    return df
 
 ### data_set setting -> training ###
 import sagemaker
@@ -176,7 +175,8 @@ def sagemaker_training(user_input):
                                             train_instance_count = 1,
                                             train_instance_type = "ml.m5.xlarge",
                                             output_path = traindata_bucket,
-                                            sagemaker_session=sagemaker_session) #sagemaker 모델 학습, 데이터 저장, 배포 관리 -> 세션 전달
+                                            sagemaker_session=sagemaker_session,
+                                            endpoint_name="sg_sp_predict") #sagemaker 모델 학습, 데이터 저장, 배포 관리 -> 세션 전달
 
     xgboost.set_hyperparameters(max_depth=4, #트리 최대 깊이 설정
                                 eta=0.2, #가중치 크기 업데이트 조절
@@ -193,13 +193,11 @@ def sagemaker_training(user_input):
     """
     모델 배포
     """
-    from sagemaker.serializers import CSVSerializer
-
     #배포
     xgboost_deploy = xgboost.deploy(initial_instance_count=1,
                                     instance_type='ml.m5.xlarge')
+    
     endpoint_name = xgboost_deploy.endpoint_name #response에 넣을 값
-    print(endpoint_name)
 
     #비교 데이터 input
     runtime = boto3.client('runtime.sagemaker')
@@ -213,8 +211,5 @@ def sagemaker_training(user_input):
     
     result = json.loads(response['Body'].read().decode())
     
-    print(result)
-    
-### ------------------------ ###
-
-sagemaker_training("애플")
+    return result
+### ------------------------------------------- ###
