@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Chatbot</title>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> <!-- FontAwesome 아이콘 -->
-
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> <!-- Plotly.js -->
     <style>
 
         /*CSS*/
@@ -196,7 +196,31 @@
             padding-right: 10px;
             text-decoration: none;
         }
-        
+
+        /* 실시간 차트 디자인 */
+        #stockChart {
+            width: 100%;
+            height: 400px;
+           
+        }
+
+        /* 주가 차트 스위치 */
+        #tabs {
+            margin-bottom: 10px;
+        }
+        #tabs button {
+            margin: 0 5px;
+            padding: 6px 12px;
+            border: 1px solid #007bff;
+            background: white;
+            color: #007bff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #tabs button.active {
+            background: #007bff;
+            color: white;
+        }
 
 
 </style>
@@ -204,9 +228,14 @@
 </head>
 <body>
     <div id="container">
-         <!-- 상단 제목 -->
-        <div id="header">
-            HH & MG
+        <div id="header">HH & MG</div>
+        <div id="search-bar" style="text-align: center; margin-bottom: 20px;">
+            <input type="text" id="symbolInput" placeholder="종목명 입력" style="padding: 8px; font-size: 16px;">
+            <button onclick="updateChart()">검색</button>
+        </div>
+        <div id="tabs" style="text-align:center;">
+            <button onclick="switchChart('1d', '1m')" class="active" id="tab-minute">1m</button>
+            <button onclick="switchChart('6mo', '1d')" id="tab-day">1d</button>    
         </div>
          <!-- 한줄 뉴스 -->
          <div id="news-bar">
@@ -216,9 +245,8 @@
         </div>        
          <!-- 주식 차트 -->
         <div id="main">
-            <!-- 차트 추가（추후 예정） -->
             <div id="content">
-                <h2>주가 그래프</h2>
+                <div id="stockChart"></div> <!-- Plotly 차트 -->
             </div>
              <!-- 챗봇 -->
             <div id="sidebar">
@@ -249,7 +277,7 @@
     
     <script>
         
-        //JavaScript//
+        // JavaScript //
 
         // 주요자산
             async function updateAssetPrices() {
@@ -271,7 +299,6 @@
             }
     }
 
-            // 10초마다 실시간 가격 업데이트
             setInterval(updateAssetPrices, 10000);
             updateAssetPrices();
 
@@ -314,7 +341,7 @@
         // 한줄 뉴스
             async function updateNewsBar() {
             try {
-            const response = await fetch("/get_news"); // Flask에서 뉴스 데이터 가져옴
+            const response = await fetch("/get_news");
             const news = await response.json();
 
             if (news.length > 0) {
@@ -329,14 +356,86 @@
                 }
                 } catch (error) {
                 console.error("뉴스 업데이트 오류:", error);
-                document.getElementById("news-text").textContent = "뉴스 로드 실패";// 오류발생시 콘솔로 확인 가능
+                document.getElementById("news-text").textContent = "뉴스 로드 실패";
+                }
+        }
+        
+
+            setInterval(updateNewsBar, 10000);
+            updateNewsBar();
+
+        //--------- 주식 그래프-----------//
+
+        // 기본 차트 설정값
+        let currentPeriod = '1d';
+        let currentInterval = '1m';
+
+        // 주가 데이터 받아옴
+        async function fetchStockData(symbol, period, interval) {
+            try {
+                const response = await fetch(`/get_stock_data?symbol=${symbol}&period=${period}&interval=${interval}`);
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return null;
+                }
+                    return data;
+                } catch (error) {
+                    console.error("주가 데이터 로드 실패:", error);
+                    return null;
                 }
         }
 
+         // 검색 심볼 변환해서 
+         async function resolveCompanySymbol(name) {
+                const response = await fetch(`/resolve_symbol?name=${encodeURIComponent(name)}`);
+                const data = await response.json();
+                return data.symbol || name;
+            }
+        
+         // 실시간 차트 생성
+        async function updateChart() {
+            const rawInput = document.getElementById("symbolInput").value.trim();
+            const symbol = await resolveCompanySymbol(rawInput || "AAPL");
 
-            // 10초마다 실시간 뉴스 업데이트
-            setInterval(updateNewsBar, 10000);
-            updateNewsBar();
+            const data = await fetchStockData(symbol, currentPeriod, currentInterval);
+            if (!data) return;
+
+            const trace = {
+                x: data.dates,
+                y: data.prices,
+                mode: "lines",
+                name: `${symbol} 종가`,
+                line: { color: "#007bff" }
+            };
+
+            const layout = {
+                title: `${symbol} 실시간 종가 차트 (${currentInterval})`,
+                xaxis: { title: "날짜", rangeslider: { visible: true } },
+                yaxis: { title: "가격" }
+            };
+
+            Plotly.newPlot("stockChart", [trace], layout);
+            }
+
+            // 탭 전환용 
+            function switchChart(period, interval) {
+                currentPeriod = period;
+                currentInterval = interval;
+                document.getElementById("tab-minute").classList.remove("active");
+                document.getElementById("tab-day").classList.remove("active");
+                if (interval === '1m') {
+                    document.getElementById("tab-minute").classList.add("active");
+                } else {
+                    document.getElementById("tab-day").classList.add("active");
+                }
+                updateChart();
+            }
+
+            setInterval(updateChart, 10000);
+            updateChart();
+            
+            //--------------------------------------------------------------------//
 
     </script>
 </body>

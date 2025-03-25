@@ -1,9 +1,14 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for, send_file
 import os
 from dotenv import load_dotenv
 import boto3
 import json
 from func.stock_price import get_currency, get_stock_price, get_stock_symbol, find_company_symbol
+import matplotlib.pyplot as plt
+import yfinance as yf
+import pandas as pd
+import plotly.express as px
+
 
 ### bedrock setting ###
 load_dotenv()
@@ -183,6 +188,34 @@ def chatbot_response4(user_input):
     return ai_response
 ### --------------- ###
 
+### 주가 그래프 ###
+def get_stock_data(symbol="AAPL", period="1d", interval="1m"):
+    try:
+        data = yf.download(symbol, period=period, interval=interval)
+
+        if data.empty:
+            return {"error": f"'{symbol}'에 대한 데이터를 찾을 수 없습니다."}
+
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.droplevel(1)
+
+        data = data.reset_index()
+
+    
+        date_col = "Datetime" if "Datetime" in data.columns else "Date"
+        data["Date"] = pd.to_datetime(data[date_col]) 
+        if data["Date"].dt.tz is None:
+            data["Date"] = data["Date"].dt.tz_localize("UTC") 
+        
+        data["Date"] = data["Date"].dt.tz_convert("Asia/Seoul")
+        data["Date"] = data["Date"].dt.strftime("%Y-%m-%d %H:%M")
+
+        return {"dates": data["Date"].tolist(), "prices": data["Close"].tolist()}
+
+    except Exception as e:
+        return {"error": str(e)}
+### --------------- ###
+
 #### Flask 엔드포인트 ####
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -239,6 +272,25 @@ from func.web.asset_price import get_asset_prices
 def asset_prices():
     prices = get_asset_prices()
     return jsonify(prices)
+### ----------- ###
+
+### 차트 그래프 page ###
+@app.route("/get_stock_data", methods=["GET"])
+def stock_data():
+    symbol = request.args.get("symbol", "AAPL").upper()
+    period = request.args.get("period", "1d")
+    interval = request.args.get("interval", "1m")
+    stock_data = get_stock_data(symbol, period, interval)
+    return jsonify(stock_data)
+### ----------- ###
+
+### 차트 그래프 symbol 변환 page ###
+@app.route("/resolve_symbol", methods=["GET"])
+def resolve_symbol():
+    name = request.args.get("name", "")
+    company_name = find_company_symbol(name)
+    symbol = get_stock_symbol(company_name)
+    return jsonify({"symbol": symbol or name})
 ### ----------- ###
 
 if __name__ == "__main__":
