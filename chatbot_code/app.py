@@ -188,6 +188,86 @@ def chatbot_response4(user_input):
     return ai_response
 ### --------------- ###
 
+### 주가 예측 ###
+import func.f_statement as fs
+
+def chatbot_response5(user_input):
+    data = fs.find_f_statement(user_input)
+
+    prompt = (
+        f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘.\n"
+        f"{data}, 해당 데이터는 순서대로 영업이육률, 순이익률, 부채비율, ROE, ROA로 재무제표 데이터야\n"
+        f"해당 데이터를 판단해서 사용자에게 해당 회사의 알맞는 대답을 정확하게 해줘\n"
+        f"질문 : {user_input}"
+    )
+
+    # Bedrock 모델 호출
+    response = bedrock_client.invoke_model(
+        modelId=inferenceProfileArn,
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 500,
+            "top_k": 250,
+            "stop_sequences": [],
+            "temperature": 1,
+            "top_p": 0.999,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": prompt}]
+                }
+            ]
+        }),
+    )
+
+    ai_response = json.loads(response["body"].read())["content"][0]["text"]
+    return ai_response
+### --------------- ###
+
+
+
+#### Flask 엔드포인트 ####
+@app.route("/chat", methods=["POST"])
+def chat():
+    data = request.get_json()
+
+    if not data or "message" not in data:
+        return jsonify({"error": "메시지가 없습니다."}), 400
+
+    user_input = data["message"].strip() 
+
+    if not user_input:
+        return jsonify({"error": "빈 메시지입니다."}), 400
+    
+    """
+    주가 질문 시 -> chatbot_response
+    주가 그래프 출력 -> chatbot_response3
+    일반 평문 질문 시 -> chatbot_response2
+    """
+    sp_predict_keywords = ["주가예측"]
+    stock_price_keywords = ["주가", "가격", "주식가격", "주식 가격"]
+    news_keywords = ["경제뉴스", "경제 뉴스", "최신 경제"]
+    f_statement_keywords = ["재무제표"]
+
+    if any(keyword in user_input for keyword in sp_predict_keywords):
+        response = chatbot_response4(user_input)
+    elif any(keyword in user_input for keyword in stock_price_keywords):
+        response = chatbot_response2(user_input)
+    elif any(keyword in user_input for keyword in news_keywords):
+        response = chatbot_response3(user_input)
+    elif any(keyword in user_input for keyword in f_statement_keywords):
+        response = chatbot_response5(user_input)
+    else:
+        response = chatbot_response(user_input)
+
+    return jsonify({"response": response})
+#### ---------------- ####
+
+
+
+## ------ homepage ------ ##
 ### 주가 그래프 ###
 def get_stock_data(symbol="AAPL", period="1d", interval="1m"):
     try:
@@ -215,46 +295,6 @@ def get_stock_data(symbol="AAPL", period="1d", interval="1m"):
     except Exception as e:
         return {"error": str(e)}
 ### --------------- ###
-
-#### Flask 엔드포인트 ####
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.get_json()
-
-    if not data or "message" not in data:
-        return jsonify({"error": "메시지가 없습니다."}), 400
-
-    user_input = data["message"].strip() 
-
-    if not user_input:
-        return jsonify({"error": "빈 메시지입니다."}), 400
-    
-    """
-    주가 질문 시 -> chatbot_response
-    주가 그래프 출력 -> chatbot_response3
-    일반 평문 질문 시 -> chatbot_response2
-    """
-    sp_predict_keywords = ["주가예측"]
-    stock_price_keywords = ["주가", "가격", "주식가격", "주식 가격"]
-    news_keywords = ["경제뉴스", "경제 뉴스", "최신 경제"]
-
-    if any(keyword in user_input for keyword in sp_predict_keywords):
-        response = chatbot_response4(user_input)
-    elif any(keyword in user_input for keyword in stock_price_keywords):
-        response = chatbot_response2(user_input)
-    elif any(keyword in user_input for keyword in news_keywords):
-        response = chatbot_response3(user_input)
-    else:
-        response = chatbot_response(user_input)
-
-    return jsonify({"response": response})
-#### ---------------- ####
-
-### chatbot ###
-@app.route("/")
-def index():
-    return render_template("index.html") 
-### ----------- ###
 
 ### 한줄 뉴스 ###
 from func.web.news import get_economic_news
@@ -291,6 +331,12 @@ def resolve_symbol():
     company_name = find_company_symbol(name)
     symbol = get_stock_symbol(company_name)
     return jsonify({"symbol": symbol or name})
+### ----------- ###
+
+### chatbot ###
+@app.route("/")
+def index():
+    return render_template("index.html") 
 ### ----------- ###
 
 if __name__ == "__main__":
