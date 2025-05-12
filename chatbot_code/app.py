@@ -8,7 +8,18 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 import pandas as pd
 import plotly.express as px
+import time
 
+import requests
+
+# 세션 생성
+session = requests.Session()
+
+# User-Agent를 당신이 원하는 값으로 설정
+session.headers.update({
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+})
 
 ### bedrock setting ###
 load_dotenv()
@@ -188,7 +199,7 @@ def chatbot_response4(user_input):
     return ai_response
 ### --------------- ###
 
-### 주가 예측 ###
+### 재무제표 ###
 import func.f_statement as fs
 
 def chatbot_response5(user_input):
@@ -340,4 +351,5 @@ def index():
 ### ----------- ###
 
 if __name__ == "__main__":
+    time.sleep(10)
     app.run(host="0.0.0.0", port=5000, debug=True)

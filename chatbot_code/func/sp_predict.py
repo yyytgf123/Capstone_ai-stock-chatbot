@@ -2,12 +2,33 @@ import sagemaker.image_uris
 import yfinance as yf
 import boto3
 import pandas as pd
-from yahooquery import search
+import requests
 from deep_translator import GoogleTranslator
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import io
 import json
+
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
+
+def search(company_name):
+    try:
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={company_name}"
+        response = requests.get(url, headers=headers, timeout=5)
+
+        if response.status_code != 200:
+            print(f"🔴 HTTP 오류: {response.status_code}")
+            return None
+
+        results = response.json().get("quotes", [])
+        if results:
+            return results[0]["symbol"]
+    except Exception as e:
+        print("❌ 심볼 검색 오류:", e)
+
+    return None
 
 ###  Dataframe -> test/csv ###
 def dataframe_to_bytes(df):
@@ -29,16 +50,12 @@ def translate_to_english(translate):
 
 def find_company_symbol(name):
     name_list = name.split()
-    symbol_storage = []
     for name_li in name_list:
-        if not name.isascii():
-            name = translate_to_english(name_li)
-            name = name.upper()
-            symbol_storage.append(get_stock_symbol(name))
-
-    result = search(symbol_storage)
-    if result and 'quotes' in result and result["quotes"]:
-        return result['quotes'][0]['symbol']
+        if not name_li.isascii():
+            name_li = translate_to_english(name_li)
+        symbol = search(name_li)
+        if symbol:
+            return symbol
     return None
 ### ---------- ###
 
