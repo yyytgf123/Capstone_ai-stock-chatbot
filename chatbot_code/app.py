@@ -9,7 +9,6 @@ import yfinance as yf
 import pandas as pd
 import plotly.express as px
 import time
-
 import requests
 
 # 세션 생성
@@ -126,7 +125,6 @@ def chatbot_response3(user_input):
         f"무조건 500자 이내에 답변을 해줘"
         f"질문 : {user_input}"
         f"대답 참고 : 뉴스 날짜 + {news_dict}"
-        # html 사이즈 파악 후 한 줄에 입력될 글자 수 지정 필요
     )
 
     response = bedrock_client.invoke_model(
@@ -291,7 +289,6 @@ def get_stock_data(symbol="AAPL", period="1d", interval="1m"):
             data.columns = data.columns.droplevel(1)
 
         data = data.reset_index()
-
     
         date_col = "Datetime" if "Datetime" in data.columns else "Date"
         data["Date"] = pd.to_datetime(data[date_col]) 
@@ -343,13 +340,14 @@ def resolve_symbol():
     symbol = get_stock_symbol(company_name)
     return jsonify({"symbol": symbol or name})
 ### ----------- ###
+### ------------------------- ###
 
-### chatbot ###
+### flaks ###
 @app.route("/")
 def index():
     return render_template("index.html") 
-### ----------- ###
 
 if __name__ == "__main__":
     time.sleep(10)
     app.run(host="0.0.0.0", port=5000, debug=True)
+### ------ ###

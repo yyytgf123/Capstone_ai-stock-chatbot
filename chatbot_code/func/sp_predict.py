@@ -9,26 +9,20 @@ from dateutil.relativedelta import relativedelta
 import io
 import json
 
+## yfinance search -> user_agent ##
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 
 def search(company_name):
-    try:
-        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={company_name}"
-        response = requests.get(url, headers=headers, timeout=5)
+    url = f"https://query1.finance.yahoo.com/v1/finance/search?q={company_name}"
+    response = requests.get(url, headers=headers, timeout=5)
 
-        if response.status_code != 200:
-            print(f"🔴 HTTP 오류: {response.status_code}")
-            return None
-
-        results = response.json().get("quotes", [])
-        if results:
-            return results[0]["symbol"]
-    except Exception as e:
-        print("❌ 심볼 검색 오류:", e)
-
+    results = response.json().get("quotes", [])
+    if results:
+        return results[0]["symbol"]
     return None
+## ---------------------------- ##
 
 ###  Dataframe -> test/csv ###
 def dataframe_to_bytes(df):
