@@ -166,6 +166,7 @@ def chatbot_response4(user_input):
 
     prompt = (
         f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘.\n"
+        f"무조건 500자 이내에 답변을 해줘"
         f"반드시 '내일 주가예측 가격은 {predict_sp}입니다.'라는 문장을 첫 문장으로 출력해.\n"
         f"그 다음에는 {symbol}의 회사 전망을 간단히 설명해줘.\n"
         f"전체 답변은 무조건 500자 이내로 작성해.\n"
@@ -207,6 +208,7 @@ def chatbot_response5(user_input):
 
     prompt = (
         f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘.\n"
+        f"무조건 500자 이내에 답변을 해줘"
         f"{data}, 해당 데이터는 순서대로 영업이육률, 순이익률, 부채비율, ROE, ROA로 재무제표 데이터야\n"
         f"해당 데이터를 판단해서 사용자에게 해당 회사의 알맞는 대답을 정확하게 해줘\n"
         f"질문 : {user_input}"
@@ -237,7 +239,46 @@ def chatbot_response5(user_input):
     return ai_response
 ### --------------- ###
 
+### 설명서 출력 ###
+from flask import render_template_string
 
+def chatbot_response6(user_input):
+    prompt = (
+        "너는 주식 관련 AI 비서야.\n"
+        "아래 그대로 출력해줘 : "
+        "--------------------------- 주식 챗봇 가이드 --------------------------\n"
+        "1. 평문 - ex) 안녕, 주식이 뭐야?, 상장된 회사 설명\n"
+        "2. 주가 정보 - ex) 삼성 주가 알려줘, 애플 주식가격 제공해줘\n"
+        "3. 최신 경제 뉴스(금일) - ex) 최신뉴스 알려줘, 금일 뉴스 알려줘\n"
+        "4. 재무제표 분석 - ex) 삼성 재무제표 분석해줘, 테슬라 재무제표 분석해줘\n"
+        "5. 주가 예측(내일) - ex) 삼성 주가예측 해줘, 주가 예측 기능은 AWS sagemaker model 생성에 15분 정도 소요\n"
+    )
+
+    # Bedrock 모델 호출
+    response = bedrock_client.invoke_model(
+        modelId=inferenceProfileArn,
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 500,
+            "top_k": 250,
+            "stop_sequences": [],
+            "temperature": 1,
+            "top_p": 0.999,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": prompt}]
+                }
+            ]
+        }),
+    )
+
+    ai_response = json.loads(response["body"].read())["content"][0]["text"]
+
+    return ai_response
+### --------------- ###
 
 #### Flask 엔드포인트 ####
 @app.route("/chat", methods=["POST"])
@@ -252,15 +293,11 @@ def chat():
     if not user_input:
         return jsonify({"error": "빈 메시지입니다."}), 400
     
-    """
-    주가 질문 시 -> chatbot_response
-    주가 그래프 출력 -> chatbot_response3
-    일반 평문 질문 시 -> chatbot_response2
-    """
-    sp_predict_keywords = ["주가예측"]
-    stock_price_keywords = ["주가", "가격", "주식가격", "주식 가격"]
-    news_keywords = ["경제뉴스", "경제 뉴스", "최신 경제"]
-    f_statement_keywords = ["재무제표"]
+    sp_predict_keywords = ["주가예측","주가 예측"]
+    stock_price_keywords = ["주가", "가격", "주식가격", "주식 가격","현재가"]
+    news_keywords = ["경제뉴스", "경제 뉴스", "최신 경제", "최신뉴스","오늘 뉴스","금일 뉴스"]
+    f_statement_keywords = ["재무제표","재무 제표"]
+    user_manual_keywords = ["사용서","설명서", "사용법", "어떻게 사용","도움말","방법","가이드"]
 
     if any(keyword in user_input for keyword in sp_predict_keywords):
         response = chatbot_response4(user_input)
@@ -270,13 +307,13 @@ def chat():
         response = chatbot_response3(user_input)
     elif any(keyword in user_input for keyword in f_statement_keywords):
         response = chatbot_response5(user_input)
+    elif any(keyword in user_input for keyword in user_manual_keywords):
+        response = chatbot_response6(user_input)
     else:
         response = chatbot_response(user_input)
 
     return jsonify({"response": response})
 #### ---------------- ####
-
-
 
 ## ------ homepage ------ ##
 ### 주가 그래프 ###
@@ -292,7 +329,6 @@ def get_stock_data(symbol="AAPL", period="1d", interval="1m"):
 
         data = data.reset_index()
 
-    
         date_col = "Datetime" if "Datetime" in data.columns else "Date"
         data["Date"] = pd.to_datetime(data[date_col]) 
         if data["Date"].dt.tz is None:
