@@ -240,8 +240,6 @@ def chatbot_response5(user_input):
 ### --------------- ###
 
 ### 설명서 출력 ###
-from flask import render_template_string
-
 def chatbot_response6(user_input):
     prompt = (
         "너는 주식 관련 AI 비서야.\n"
@@ -251,7 +249,7 @@ def chatbot_response6(user_input):
         "2. 주가 정보 - ex) 삼성 주가 알려줘, 애플 주식가격 제공해줘\n"
         "3. 최신 경제 뉴스(금일) - ex) 최신뉴스 알려줘, 금일 뉴스 알려줘\n"
         "4. 재무제표 분석 - ex) 삼성 재무제표 분석해줘, 테슬라 재무제표 분석해줘\n"
-        "5. 주가 예측(내일) - ex) 삼성 주가예측 해줘, 주가 예측 기능은 AWS sagemaker model 생성에 15분 정도 소요\n"
+        "5. 주가 예측(내일), 주가 예측 기능은 AWS sagemaker model 생성에 15분 정도 소요 - ex) 삼성 주가예측 해줘\n"
     )
 
     # Bedrock 모델 호출
