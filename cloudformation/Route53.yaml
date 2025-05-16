@@ -3,9 +3,6 @@ Resources:
     Type: AWS::Route53::HostedZone
     Properties:
       Name: cbnu.store
-      VPCs:
-        - VPCId: !ImportValue VPC
-          VPCRegion: ap-northeast-2
 
   Route53Record:
     Type: AWS::Route53::RecordSet
