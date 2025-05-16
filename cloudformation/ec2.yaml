@@ -3,7 +3,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
-      ImageId: ami-04c5ea94e03ab0ff5
+      ImageId: ami-080fcb0ce02bcbbc5
       SecurityGroupIds: 
         - !ImportValue Securitygroup
       AvailabilityZone: ap-northeast-2a
