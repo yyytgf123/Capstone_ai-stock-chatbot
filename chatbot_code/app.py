@@ -62,23 +62,22 @@ def chatbot_response(user_input):
     return ai_response.strip()
 ### --------------- ###
 
-### 주식 가격 출력 response ###
+### 주식 가격 출력 ###
 def chatbot_response2(user_input):
     company_name = find_company_symbol(user_input)
     symbol = get_stock_symbol(company_name)
-    stock_info = ""
 
     if symbol:
         stock_price = get_stock_price(symbol)
         currency = get_currency(symbol)
-        stock_info = f"{company_name}의 주가는 {stock_price}{currency}입니다. "
+        stock_info = f"{company_name}(Symbol)의 주가는 {stock_price}{currency}입니다. "
 
     prompt = (
         f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘."
         f"주식 정보가 포함된 경우 가격을 포함해서 답변해줘."
         f"무조건 200자 이내에 답변을 해줘"
         f"질문: {user_input}\n"
-        f"답변:"
+        f"답변: {company_name}(Symbol)의 주가는 {stock_price}{currency}입니다. "
     )
 
     response = bedrock_client.invoke_model(
@@ -126,7 +125,6 @@ def chatbot_response3(user_input):
         f"무조건 500자 이내에 답변을 해줘"
         f"질문 : {user_input}"
         f"대답 참고 : 뉴스 날짜 + {news_dict}"
-        # html 사이즈 파악 후 한 줄에 입력될 글자 수 지정 필요
     )
 
     response = bedrock_client.invoke_model(
@@ -168,10 +166,8 @@ def chatbot_response4(user_input):
         f"너는 AI 비서야. 질문에 대해 친절하고 유익한 답변을 해줘.\n"
         f"무조건 500자 이내에 답변을 해줘"
         f"반드시 '내일 주가예측 가격은 {predict_sp}입니다.'라는 문장을 첫 문장으로 출력해.\n"
+        f"그 다음에는 이 결과는 XGBOOST를 사용했고 기술적 지표를 사용해서 나온 값이라 설명해줘\n"
         f"그 다음에는 {symbol}의 회사 전망을 간단히 설명해줘.\n"
-        f"전체 답변은 무조건 500자 이내로 작성해.\n"
-        f"이 주가 예측은 기술적 지표 기반의 추정값임을 명시해줘.\n"
-        f"대답:"
     )
 
     # Bedrock 모델 호출
@@ -245,9 +241,9 @@ def chatbot_response6(user_input):
         "너는 주식 관련 AI 비서야.\n"
         "아래 그대로 출력해줘 : "
         "--------------------------- 주식 챗봇 가이드 --------------------------\n"
-        "1. 평문 - ex) 안녕, 주식이 뭐야?, 상장된 회사 설명\n"
+        "1. 평문 - ex) 안녕, 주식이 뭐야?, 상장된 회사 설명해줘\n"
         "2. 주가 정보 - ex) 삼성 주가 알려줘, 애플 주식가격 제공해줘\n"
-        "3. 최신 경제 뉴스(금일) - ex) 최신뉴스 알려줘, 금일 뉴스 알려줘\n"
+        "3. 최신 경제 뉴스(금일) - ex) 경제 뉴스 알려줘, 금일 뉴스 알려줘\n"
         "4. 재무제표 분석 - ex) 삼성 재무제표 분석해줘, 테슬라 재무제표 분석해줘\n"
         "5. 주가 예측(내일), 주가 예측 기능은 AWS sagemaker model 생성에 15분 정도 소요 - ex) 삼성 주가예측 해줘\n"
     )
@@ -295,7 +291,7 @@ def chat():
     stock_price_keywords = ["주가", "가격", "주식가격", "주식 가격","현재가"]
     news_keywords = ["경제뉴스", "경제 뉴스", "최신 경제", "최신뉴스","오늘 뉴스","금일 뉴스"]
     f_statement_keywords = ["재무제표","재무 제표"]
-    user_manual_keywords = ["사용서","설명서", "사용법", "어떻게 사용","도움말","방법","가이드"]
+    user_manual_keywords = ["기능","사용서","설명서", "사용법", "어떻게 사용","도움말","방법","가이드"]
 
     if any(keyword in user_input for keyword in sp_predict_keywords):
         response = chatbot_response4(user_input)
@@ -313,7 +309,7 @@ def chat():
     return jsonify({"response": response})
 #### ---------------- ####
 
-## ------ homepage ------ ##
+## ------ homepage ------ ##z
 ### 주가 그래프 ###
 def get_stock_data(symbol="AAPL", period="1d", interval="1m"):
     try:
