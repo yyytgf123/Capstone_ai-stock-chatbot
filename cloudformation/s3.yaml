@@ -1,0 +1,28 @@
+Resources:
+  S3:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: chatbot-sagemaker-s3      
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: 
+        !Ref S3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: "s3:GetObject"
+            Resource: 
+              Fn::Join:
+              - ''
+              - -  'arn:aws:s3:::'
+                -  !Ref S3
+                - '/*'

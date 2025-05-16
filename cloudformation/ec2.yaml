@@ -2,8 +2,8 @@ Resources:
   EC2:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro
-      ImageId: ami-024ea438ab0376a47
+      InstanceType: t3.micro
+      ImageId: ami-04c5ea94e03ab0ff5
       SecurityGroupIds: 
         - !ImportValue Securitygroup
       AvailabilityZone: ap-northeast-2a
@@ -15,15 +15,24 @@ Resources:
       #       VolumeType: gp2
       SubnetId: !ImportValue PublicSubnet
       IamInstanceProfile: !ImportValue InstanceProfile
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          sudo apt update -y
-          sudo apt install -u python3 python3-pip python3-vevn git
-          pip install --upgrade pip
-          pip install flask boto3 yahooquery requests
-          pip install beautifulsoup4
-          pip install googletrans==4.0.0rc1
+      # UserData:
+      #   Fn::Base64: !Sub |
+      #     #!/bin/bash
+      #     sudo apt update -y
+      #     sudo apt install -u python3 python3-pip python3-vevn git
+      #     pip install --upgrade pip
+      #     pip install yfinance
+      #     pip install flask boto3 yahooquery requests
+      #     pip install googletrans==4.0.0rc1
+      #     pip install python-dotenv
+      #     pip install pandas
+      #     pip install matplotlib
+      #     pip install plotly
+      #     pip install requests
+      #     pip install deep-translator
+      #     pip install beautifulsoup4
+      #     pip install sagemaker
+      #     pip install python-dateutil
       Tags:
         - Key: Name
           Value: chatbot_ec2
